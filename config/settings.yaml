@@ -93,3 +93,19 @@ no_ticketing_marker: "///"
 default_expected_providers: [dice, cts, tickettoaster]
 
 month_names: [JANUAR, FEBRUAR, "MÄRZ", APRIL, MAI, JUNI, JULI, AUGUST, SEPTEMBER, OKTOBER, NOVEMBER, DEZEMBER]
+
+# ---------------------------------------------------------------- Phase 2: report import
+# Senders whose mails always go to needs_review until the team decides (open question 1).
+review_senders: ["rausgegangen"]
+
+# Venue matching (HANDOVER §6.2 step 5). Names are compared after normalization (lowercase,
+# no diacritics/punctuation, stopwords removed). A venue matches if either side's tokens are
+# contained in the other's, or via this alias list (email venue -> sheet venue).
+venue_stopwords: [berlin, am, im, the, der, die, das]
+venue_aliases:
+  "kindl locations sudhaus": "kindl brauerei sudhaus"
+  "kindl locations": "kindl brauerei sudhaus"
+
+# Extraction files and mails live here (gitignored).
+mail_dir: work/mail
+extraction_dir: work/extractions
