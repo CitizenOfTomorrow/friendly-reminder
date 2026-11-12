@@ -108,6 +108,7 @@ def test_norm_text():
 def test_formula_shape():
     assert formula_shape("=AA254+AE254+AC254+AG254") == formula_shape("=AA298+AE298+AC298+AG298")
     assert formula_shape("=SUM(AE2,AC2,AG2,AI2)") != formula_shape("=AA2+AE2+AC2+AG2")
+    assert formula_shape("=SUM(AE2;AC2;AG2;AI2)") == formula_shape("=SUM(AE7,AC7,AG7,AI7)")  # German locale
 
 
 # ----------------------------------------------------------------- runtime safety

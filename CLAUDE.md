@@ -2,7 +2,7 @@
 
 Read `HANDOVER.md` fully before changing anything. It's the spec.
 
-**Current phase: 1 (history snapshot). Dry run done; the test-target write is pending (needs service account + `history` tab in the test copy).**
+**Current phase: 1 (history snapshot). Acceptance met on the test copy on 2026-11-12 (dry run, one write, second run no-op). Waiting for human sign-off before Phase 2.**
 Don't start a later phase until the previous phase's acceptance criteria (HANDOVER §10) are met and a human has signed off.
 
 ## Hard rules
@@ -21,7 +21,8 @@ Don't start a later phase until the previous phase's acceptance criteria (HANDOV
 pip install -r requirements.txt
 python -m pytest -q tests
 SHEET_XLSX=work/input/sheet_export.xlsx python scripts/sheet_dump.py [--as-of YYYY-MM-DD]   # offline
-python scripts/sheet_dump.py                     # live sheet: needs GOOGLE_APPLICATION_CREDENTIALS + spreadsheet_id
+python scripts/sheet_dump.py                     # live sheet: needs GOOGLE_APPLICATION_CREDENTIALS (or GOOGLE_SA_JSON) + spreadsheet_id
+DRY_RUN=0 TARGET=test python scripts/history_snapshot.py   # writes the history tab of the test copy
 python scripts/check_access.py                   # credentials / connectivity, read-only
 SHEET_XLSX=work/input/live_export.xlsx python scripts/history_snapshot.py   # Phase 1 dry run -> work/history_<monday>.csv
 ```

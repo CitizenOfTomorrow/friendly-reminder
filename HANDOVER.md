@@ -151,6 +151,8 @@ The runtime flow for the report import is: `fetch_reports.py` writes each new em
 
 - The header "Andere" appears **twice** (M1 and AI1), some header cells are empty, and E1:F1 is merged. **Address columns by letter from `settings.yaml`, not by header name.** Optionally ask the team to rename M1 to "Andere Promo".
 - **Not every row is a show.** There are month separator rows ("NOVEMBER", "DEZEMBER"), a "MASTER" template row with "xx" values, and empty rows. A row is a show only if Termin is a real date AND Artist and Venue are filled AND neither is "xx".
+- The live API returns formulas in the sheet's **German locale** (`=SUM(AE2;AC2)` with `;`), the xlsx export with `,`. Normalize before comparing; when writing formulas (Phase 4), write them with `;` or use `value_input_option=USER_ENTERED` and test it on the test copy first.
+- Einlass/Beginn (S/T) are **real time values** in older rows (API: fraction of a day, 0.7917 = 19:00) and **text** like `19.00` in newer rows. Phase 4 writes text, like the newer rows.
 - Dates may come back as German strings (`10.04.2027`) or serial numbers depending on the render option. Normalize to ISO.
 - Numbers may use German formatting (`1.234`).
 - Some provider cells contain small formulas, e.g. `=115+19`. Read with value render mode `FORMULA` to detect them. **Never overwrite a formula cell**; send it to review instead.

@@ -319,8 +319,12 @@ def norm_text(s: Any) -> str:
 
 
 def formula_shape(f: str) -> str:
-    """'=AA254+AE254' -> '=AA#+AE#' so formulas can be compared across rows."""
-    return re.sub(r"([A-Z]{1,3})\d+", r"\1#", f.replace(" ", "").upper())
+    """'=AA254+AE254' -> '=AA#+AE#' so formulas can be compared across rows.
+
+    The live API returns formulas in the sheet's locale (German: ';' as argument separator),
+    the xlsx export uses ','. Normalize to ','.
+    """
+    return re.sub(r"([A-Z]{1,3})\d+", r"\1#", f.replace(" ", "").replace(";", ",").upper())
 
 
 # --------------------------------------------------------------------------- run report
