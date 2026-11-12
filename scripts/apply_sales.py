@@ -28,6 +28,8 @@ LOG_COLUMNS = ["timestamp", "run_id", "dry_run", "message_id", "row_number", "te
 REVIEW_COLUMNS = ["timestamp", "run_id", "message_id", "subject", "sender", "reason", "extracted_json",
                   "content_hash"]
 PROCESSED_NOTE = "message processed"
+UNCHANGED_NOTE = "reported, unchanged (not written)"
+ZERO_NOTE = "reported 0, not written"
 
 
 # --------------------------------------------------------------------------- matching
@@ -278,6 +280,9 @@ def review_row(d: Decision, ts: str, run_id: str, mail: dict) -> list:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--as-of", type=dt.date.fromisoformat, help="treat this date as today")
+    ap.add_argument("--reprocess", action="store_true",
+                    help="handle mails again even if already in log/needs_review (cells only change if the "
+                         "number differs; known review cases are not re-entered)")
     args = ap.parse_args(argv)
 
     settings = load_settings()
@@ -320,7 +325,7 @@ def main(argv: list[str] | None = None) -> int:
     run_hashes: dict[str, str] = {}
     for key, mail in sorted(mails.items(), key=lambda kv: kv[1].get("date", "")):
         mid, h = mail["message_id"], mail.get("content_hash", "")
-        if mid in seen_ids or (h and h in seen_hashes):
+        if not args.reprocess and (mid in seen_ids or (h and h in seen_hashes)):
             report.info.append(f"skipped, already processed: {mid} ({mail.get('subject')!r})")
             continue
         if h and h in run_hashes:
@@ -364,8 +369,11 @@ def main(argv: list[str] | None = None) -> int:
         decisions.append((mail, ds))
     writes = {k: d for k, d in planned.items() if d.kind == "apply"}
 
+    if args.reprocess:
+        report.warnings.append("--reprocess: already processed mails were handled again")
     ts = dt.datetime.now().astimezone().isoformat(timespec="seconds")
     new_log, new_review = [], []
+    reported_logged: set[tuple[int, str]] = set()   # one "reported" row per show/provider per run
     counts = {"apply": 0, "noop": 0, "skip_zero": 0, "review": 0, "dup_review": 0}
     for mail, ds in decisions:
         c = {k: sum(1 for d in ds if d.kind == k) for k in counts}
@@ -373,7 +381,15 @@ def main(argv: list[str] | None = None) -> int:
             counts[k] += c[k]
         for d in ds:
             label = f"{d.show.artist} ({d.show.termin})" if d.show else (d.item or {}).get("artist", "-")
+            if d.kind in ("noop", "skip_zero") and d.show is not None:
+                # record that the provider reported this show, even though nothing is written (Phase 3 needs it)
+                k = (d.show.row_number, d.column)
+                if k not in reported_logged and k not in writes:
+                    reported_logged.add(k)
+                    d.note = UNCHANGED_NOTE if d.kind == "noop" else f"{ZERO_NOTE} ({d.note})"
+                    new_log.append(log_row(d, ts, report.run_id, rt.dry_run, mail))
             if d.kind == "apply":
+                reported_logged.add((d.show.row_number, d.column))
                 new_log.append(log_row(d, ts, report.run_id, rt.dry_run, mail))
                 report.planned.append(f"{d.column}{d.show.row_number} {label}: {d.old} -> {d.new}"
                                       + (f"  [{d.note}]" if d.note else ""))

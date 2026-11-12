@@ -1,0 +1,15 @@
+Subject: Ticketzahlen {{ artist }} – {{ datum }} {{ venue }} (KW {{ kw }})
+
+Hallo,
+
+hier der aktuelle Vorverkaufsstand für {{ artist }} am {{ datum }} ({{ venue }}):
+
+{% for p in provider_zahlen %}{{ p.name }}: {{ p.verkauft }}{% if p.stand %} ({{ p.stand }}){% endif %}
+{% endfor %}
+Gesamt: {{ vvk_total }} von {{ kon_total }} ({{ pct }} %)
+{% if zuwachs is not none %}Zuwachs zur Vorwoche: {{ "%+d" | format(zuwachs) }}
+{% endif %}{% if fehlend %}
+Noch ausstehend: {{ fehlend | join(", ") }}
+{% endif %}
+Viele Grüße
+{{ signature }}

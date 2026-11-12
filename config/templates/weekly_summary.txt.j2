@@ -1,0 +1,38 @@
+Subject: Wochenübersicht Ticketzahlen KW {{ kw }} ({{ stand }})
+
+Hallo Tim,
+
+Stand {{ stand }}{% if after_cutoff %} (nach dem Cutoff {{ cutoff }}){% else %} (vor dem Cutoff {{ cutoff }}){% endif %}.
+
+KOMPLETT – Update-Entwurf liegt bereit ({{ complete | length }}):
+{% for s in complete %}- {{ s.datum }} {{ s.artist }} ({{ s.venue }}): {{ s.vvk }} / {{ s.kon }}{% if s.zuwachs is not none %}, {{ "%+d" | format(s.zuwachs) }} zur Vorwoche{% endif %}{% if s.draft %} -> Entwurf an {{ s.to | join(", ") }}{% endif %}
+{% else %}- keine
+{% endfor %}
+UNVOLLSTÄNDIG ({{ incomplete | length }}):
+{% for s in incomplete %}- {{ s.datum }} {{ s.artist }} ({{ s.venue }}): fehlt {{ s.missing | join(", ") }}{% if s.draft %} -> Entwurf mit Hinweis an {{ s.to | join(", ") }}{% endif %}
+{% else %}- keine
+{% endfor %}
+AUSVERKAUFT – kein Update ({{ sold_out | length }}):
+{% for s in sold_out %}- {{ s.datum }} {{ s.artist }} ({{ s.venue }}): {{ s.vvk }} / {{ s.kon }}
+{% else %}- keine
+{% endfor %}
+BANDSHOP-ZAHLEN FEHLEN ({{ band_missing | length }}):
+{% for b in band_missing %}- {{ b.datum }} {{ b.artist }}: {% if b.to %}Erinnerung an {{ b.to | join(", ") }}{% else %}bitte manuell prüfen: {{ b.where }}{% endif %}
+{% else %}- keine
+{% endfor %}
+OHNE EMPFÄNGER in "Ticketzahlen an" ({{ no_contact | length }}):
+{% for s in no_contact %}- {{ s.datum }} {{ s.artist }}{% if s.raw %}: "{{ s.raw }}"{% endif %}
+{% else %}- keine
+{% endfor %}
+NOCH OHNE KONTINGENT – übersprungen ({{ no_allocation | length }}):
+{% for s in no_allocation %}- {{ s.datum }} {{ s.artist }}{% if s.on_sale %} [{{ s.on_sale }}]{% endif %}
+{% else %}- keine
+{% endfor %}
+ZUR PRÜFUNG in needs_review diese Woche ({{ review | length }}):
+{% for r in review %}- {{ r }}
+{% else %}- keine
+{% endfor %}
+Alle Entwürfe sind nur Entwürfe – bitte prüfen und selbst senden.
+
+Viele Grüße
+Ticketing-Automation

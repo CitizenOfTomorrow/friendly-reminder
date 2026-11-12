@@ -2,7 +2,7 @@
 
 Read `HANDOVER.md` fully before changing anything. It's the spec.
 
-**Current phase: 2 (report import). Phase 1 signed off. Phase 2 run on the test copy on 2026-11-12 (1 write, 11 to review, re-run skipped everything). Waiting for sign-off before Phase 3.**
+**Current phase: 3 (completeness + drafts), eml drafts only. Phases 1–2 signed off. The demo sheet is the test target; the production sheet ID is in the config but unused. Drafts go to `work/drafts/<week>/*.eml` — no mailbox drafts until approved. Modularity proposal: `docs/ARCHITECTURE.md`.**
 Don't start a later phase until the previous phase's acceptance criteria (HANDOVER §10) are met and a human has signed off.
 
 ## Hard rules
@@ -30,9 +30,10 @@ python scripts/import_gmail_json.py work/gmail_raw/*.json   # Phase 2: Gmail con
 # then Claude writes work/extractions/<key>.json per mail (skill: ticketing)
 python scripts/apply_sales.py                    # dry run plan; DRY_RUN=0 TARGET=test to write
 python scripts/setup_tabs.py                     # one-time: log / needs_review tabs
+python scripts/completeness.py [--now 2026-11-10T13:00]   # Phase 3: drafts -> work/drafts/<week>/*.eml
 ```
 
 Code layout: `scripts/common.py` (config, safety rails, sheet sources, parsing, run report),
-`scripts/sheet_model.py` (header check, show rows, flags), `scripts/history_snapshot.py` (Phase 1), `scripts/mail_model.py` + `fetch_reports.py` + `import_gmail_json.py` + `apply_sales.py` + `setup_tabs.py` (Phase 2).
+`scripts/sheet_model.py` (header check, show rows, flags), `scripts/history_snapshot.py` (Phase 1), `scripts/mail_model.py` + `fetch_reports.py` + `import_gmail_json.py` + `apply_sales.py` + `setup_tabs.py` (Phase 2), `completeness.py` + `outbox.py` + `config/templates/` (Phase 3).
 
 Mail access in tests: **read only**. Never send, label, move or delete mail, and don't create drafts until Phase 3 is approved. Every run writes `work/run_<id>_<workflow>.md`.

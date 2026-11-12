@@ -14,7 +14,7 @@ targets:
     imap_folder: "n8n"
     drafts_folder: "[Gmail]/Drafts"
   prod:
-    spreadsheet_id: "TODO_PROD_SPREADSHEET_ID"
+    spreadsheet_id: "1lyTkvTkEZ9jqsnShIAnP1M7j_KwqU9ofDTh0dAEv-BA"   # production sheet (not used yet; demo sheet for now)
     imap_folder: "INBOX"
     drafts_folder: "Drafts"
 
@@ -109,3 +109,11 @@ venue_aliases:
 # Extraction files and mails live here (gitignored).
 mail_dir: work/mail
 extraction_dir: work/extractions
+
+# ---------------------------------------------------------------- Phase 3: completeness + drafts
+drafts:
+  backend: eml                       # eml only for now; imap / gmail need an explicit OK
+  out_dir: work/drafts
+  from: "Ticketing | Friendly Reminder <ticketing@friendlyreminder.live>"
+  summary_to: ["ticketing@friendlyreminder.live"]
+  signature: "Tim / Friendly Reminder"
