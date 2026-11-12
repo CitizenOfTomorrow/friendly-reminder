@@ -1,0 +1,95 @@
+# Non-secret configuration. Secrets live in environment variables only (see HANDOVER.md §8).
+
+timezone: Europe/Berlin
+lookback_days: 14
+confidence_threshold: 0.8
+cutoff:
+  weekday: tuesday
+  time: "12:00"
+
+# Selected with TARGET=test|prod (default test).
+targets:
+  test:
+    spreadsheet_id: "TODO_TEST_SPREADSHEET_ID"
+    imap_folder: "n8n"
+    drafts_folder: "[Gmail]/Drafts"
+  prod:
+    spreadsheet_id: "TODO_PROD_SPREADSHEET_ID"
+    imap_folder: "INBOX"
+    drafts_folder: "Drafts"
+
+tabs:
+  main: "listenberlin ticketing"
+  log: "log"
+  needs_review: "needs_review"
+  history: "history"
+  neue_shows: "neue_shows"
+
+header_row: 1
+
+# Address columns by letter. `header` is checked against the live header row on
+# every run; a mismatch aborts. header "" means the header cell must be empty.
+columns:
+  booker:        {col: A,  header: "y"}
+  tl:            {col: B,  header: "TL"}
+  on_sale:       {col: C,  header: "On Sale"}
+  termin:        {col: N,  header: "Termin"}
+  agentur:       {col: O,  header: "Agentur"}
+  artist:        {col: P,  header: "Artist"}
+  venue:         {col: Q,  header: "Venue"}
+  support:       {col: R,  header: "Support"}
+  einlass:       {col: S,  header: "Einlass"}
+  beginn:        {col: T,  header: "Beginn"}
+  vvk:           {col: V,  header: "VVK"}
+  kon:           {col: W,  header: "KON"}
+  diff:          {col: X,  header: ""}
+  pct:           {col: Y,  header: "%"}
+  contacts:      {col: AK, header: "Ticketzahlen an"}
+  bandshop_info: {col: AL, header: "Ticketzahlen über Bandshop anfragen"}
+
+providers:
+  dice:
+    sold: {col: AA, header: "Dice"}
+    alloc: {col: AB, header: "Dice (K)"}
+    label_kontingent: "Dice"
+    label_preis: "DICE"
+    sender_hints: ["dice.fm"]
+  cts:
+    sold: {col: AC, header: "CTS"}
+    alloc: {col: AD, header: "CTS (K)"}
+    label_kontingent: "CTS"
+    label_preis: "CTS Eventim"
+    sender_hints: ["eventim"]
+  tickettoaster:
+    sold: {col: AE, header: "TT"}
+    alloc: {col: AF, header: "TT (K)"}
+    label_kontingent: "Tickettoaster"
+    label_preis: "Tickettoaster"
+    sender_hints: ["tickettoaster"]
+  band:
+    sold: {col: AG, header: "Band"}
+    alloc: {col: AH, header: "Band (K)"}
+    label_kontingent: "Band"
+    label_preis: "Bandshop"
+    sender_hints: []          # agency varies per show
+  andere:
+    sold: {col: AI, header: "Andere"}
+    alloc: {col: AJ, header: "Andere (K)"}
+    label_kontingent: "Andere"
+    label_preis: "Andere"
+    sender_hints: []          # tbd (open question 1)
+
+# Columns that no code path may ever write.
+never_write: [V, W, X, Y]
+# Tim's manual archive starts here (newest date on the left). Never touched, not header-checked.
+archive_first_col: AN
+
+# Row markers
+master_marker: "MASTER"
+placeholder_value: "xx"
+no_ticketing_marker: "///"
+
+# Used when a show has no allocation > 0 at all (HANDOVER §6.5).
+default_expected_providers: [dice, cts, tickettoaster]
+
+month_names: [JANUAR, FEBRUAR, "MÄRZ", APRIL, MAI, JUNI, JULI, AUGUST, SEPTEMBER, OKTOBER, NOVEMBER, DEZEMBER]
