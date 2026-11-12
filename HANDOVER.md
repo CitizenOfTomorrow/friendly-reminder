@@ -100,7 +100,7 @@ ticketing-automation/
   tests/                   # unit tests for matching, validation, date/number parsing
 ```
 
-The runtime flow for the report import is: `fetch_reports.py` writes each new email as JSON to `work/` → Claude reads them and writes `work/extraction_<msgid>.json` following the schema in section 6.3 → `apply_sales.py` validates and applies (or prints the plan in dry run).
+The runtime flow for the report import is: `fetch_reports.py` (IMAP) or `import_gmail_json.py` (Gmail connector) writes each new email as JSON to `work/mail/<key>.json` → Claude reads them and writes `work/extractions/<key>.json` following the schema in section 6.3 → `apply_sales.py` validates and applies (or writes the plan to `work/apply_plan_<run>.json` in dry run).
 
 **Dependencies:** Python 3.11+, `imapclient`, `gspread`, `google-api-python-client` (for Drive), `jinja2`, `pyyaml`. No LLM API key needed: Claude Code itself does the extraction step.
 
@@ -173,11 +173,13 @@ The runtime flow for the report import is: `fetch_reports.py` writes each new em
 
 ### 5.2 New tabs (create in the test copy first, then ask the team to add them in production)
 
-**`log`**: one row per applied or planned change
-`timestamp | run_id | dry_run | message_id | row_number | termin | artist | venue | provider | column | old | new | evidence | note`
+**`log`**: one row per applied change, plus one "message processed" marker row per mail (empty column; `note` has the counts), so re-runs skip the mail
+`timestamp | run_id | dry_run | message_id | row_number | termin | artist | venue | provider | column | old | new | evidence | note | content_hash`
 
-**`needs_review`**: everything the automation would not decide alone
-`timestamp | run_id | message_id | subject | sender | reason | extracted_json`
+**`needs_review`**: everything the automation would not decide alone. The same case (reason, provider, show, number) is entered only once, even if several mails report it.
+`timestamp | run_id | message_id | subject | sender | reason | extracted_json | content_hash`
+
+Both tabs are created by `scripts/setup_tabs.py`, which renames the prototype's tabs to `log_prototype` / `needs_review_prototype`.
 
 **`history`**: weekly snapshot, long format. Replaces Tim's manual archive columns.
 `snapshot_date | show_key | row_number | termin | artist | venue | dice | cts | tickettoaster | band | andere | vvk_total | kon_total | pct`
@@ -240,7 +242,9 @@ An unknown provider always goes to `needs_review`.
    - The report lists **FAUNA on 2027-02-20**, which confirms the sheet date 2026-02-20 is a typo.
    - The existing `log` / `needs_review` tabs use the prototype's columns (`timestamp | message_id | show_id | field | old | new | evidence`). The schema in 5.2 is different: rename the old tabs to `log_prototype` / `needs_review_prototype` and create new ones.
    - Test sheet state after that run: AE (TT) was reset to 0 before the import, so Nathanial Young (review, venue mismatch) still shows 0 instead of the real 5, and AE259–262 (past shows) are 0.
-6. Agency emails with band shop numbers arrive from varying senders. Claude classifies these as `band` when the email clearly reports band shop sales for one of the shows.
+6. **Phase 2 test run, 2026-11-12** (test copy, 14 mails from the Gmail label `n8n`, read via the Gmail connector): 1 cell written (AE285 Nathanial Young 0 → 5, via the venue alias), 153 unchanged, 11 to review (unknown show "The Paper Lanterns", 4 decreases from an older Dice report, FAUNA typo hint, 2 mails without figures), 7 repeated review cases not re-entered. Second run: all 14 mails skipped. The Eventim, agency band shop, "134/200", Rausgegangen and formula-cell cases weren't in the mailbox and are covered by unit tests on synthetic mails.
+7. The Gmail connector doesn't expose the RFC Message-ID header, so connector imports use `gmail:<id>`. IMAP imports use the real Message-ID. Don't mix both sources for the same mailbox, or dedup won't recognize a mail seen through the other path.
+8. Agency emails with band shop numbers arrive from varying senders. Claude classifies these as `band` when the email clearly reports band shop sales for one of the shows.
 
 ### 6.3 Extraction instructions (for Claude at runtime; also copy into the skill)
 

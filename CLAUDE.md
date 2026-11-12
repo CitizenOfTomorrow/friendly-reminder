@@ -2,7 +2,7 @@
 
 Read `HANDOVER.md` fully before changing anything. It's the spec.
 
-**Current phase: 1 (history snapshot). Acceptance met on the test copy on 2026-11-12 (dry run, one write, second run no-op). Waiting for human sign-off before Phase 2.**
+**Current phase: 2 (report import). Phase 1 signed off. Phase 2 run on the test copy on 2026-11-12 (1 write, 11 to review, re-run skipped everything). Waiting for sign-off before Phase 3.**
 Don't start a later phase until the previous phase's acceptance criteria (HANDOVER §10) are met and a human has signed off.
 
 ## Hard rules
@@ -25,7 +25,14 @@ python scripts/sheet_dump.py                     # live sheet: needs GOOGLE_APPL
 DRY_RUN=0 TARGET=test python scripts/history_snapshot.py   # writes the history tab of the test copy
 python scripts/check_access.py                   # credentials / connectivity, read-only
 SHEET_XLSX=work/input/live_export.xlsx python scripts/history_snapshot.py   # Phase 1 dry run -> work/history_<monday>.csv
+python scripts/fetch_reports.py                  # Phase 2: IMAP -> work/mail/ (read-only)
+python scripts/import_gmail_json.py work/gmail_raw/*.json   # Phase 2: Gmail connector output -> work/mail/
+# then Claude writes work/extractions/<key>.json per mail (skill: ticketing)
+python scripts/apply_sales.py                    # dry run plan; DRY_RUN=0 TARGET=test to write
+python scripts/setup_tabs.py                     # one-time: log / needs_review tabs
 ```
 
 Code layout: `scripts/common.py` (config, safety rails, sheet sources, parsing, run report),
-`scripts/sheet_model.py` (header check, show rows, flags), `scripts/history_snapshot.py` (Phase 1). Every run writes `work/run_<id>_<workflow>.md`.
+`scripts/sheet_model.py` (header check, show rows, flags), `scripts/history_snapshot.py` (Phase 1), `scripts/mail_model.py` + `fetch_reports.py` + `import_gmail_json.py` + `apply_sales.py` + `setup_tabs.py` (Phase 2).
+
+Mail access in tests: **read only**. Never send, label, move or delete mail, and don't create drafts until Phase 3 is approved. Every run writes `work/run_<id>_<workflow>.md`.

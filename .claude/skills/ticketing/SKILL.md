@@ -26,7 +26,9 @@ Spec: `HANDOVER.md` (sections 5, 6.3, 6.4, 7). Config: `config/settings.yaml`. T
 
 Show identity = Termin (N) + Artist (P) + Venue (Q). `work/upcoming_shows.json` lists upcoming shows with `row_number`.
 
-## Extracting a report email → `work/extraction_<msgid>.json`
+## Extracting a report email → `work/extractions/<key>.json`
+
+`<key>` is the mail file's name in `work/mail/`; copy its `message_id` exactly. If the mail quotes earlier mails, use only the newest report in it. An email with no sales figures gets `"shows": []`.
 
 Extract the current number of tickets sold for EVERY show the email reports on; one email may cover many shows. For each, choose the `row_number` from `upcoming_shows.json` whose date and artist clearly match. Use the venue to confirm or to decide between candidates. If no row clearly matches, use null.
 
