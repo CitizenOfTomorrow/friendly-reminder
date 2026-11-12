@@ -29,6 +29,10 @@ def check_google(settings, rt) -> tuple[str, str]:
         tabs = [w.title for w in sh.worksheets()]
     except SystemExit as e:
         return "FAIL", str(e)
+    except PermissionError:
+        who = getattr(google_credentials(), "service_account_email", "the service account")
+        return "FAIL", (f"403: login worked, but the spreadsheet is not shared with {who}. "
+                        "Share it with that address as Editor.")
     except Exception as e:  # noqa: BLE001 - report any failure plainly
         return "FAIL", f"{type(e).__name__}: {e}"
     wanted = settings["tabs"]
