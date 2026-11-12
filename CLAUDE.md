@@ -2,7 +2,7 @@
 
 Read `HANDOVER.md` fully before changing anything. It's the spec.
 
-**Current phase: 0 done (read-only dump + access check). Next: Phase 1 (history snapshot).**
+**Current phase: 1 (history snapshot). Dry run done; the test-target write is pending (needs service account + `history` tab in the test copy).**
 Don't start a later phase until the previous phase's acceptance criteria (HANDOVER §10) are met and a human has signed off.
 
 ## Hard rules
@@ -23,7 +23,8 @@ python -m pytest -q tests
 SHEET_XLSX=work/input/sheet_export.xlsx python scripts/sheet_dump.py [--as-of YYYY-MM-DD]   # offline
 python scripts/sheet_dump.py                     # live sheet: needs GOOGLE_APPLICATION_CREDENTIALS + spreadsheet_id
 python scripts/check_access.py                   # credentials / connectivity, read-only
+SHEET_XLSX=work/input/live_export.xlsx python scripts/history_snapshot.py   # Phase 1 dry run -> work/history_<monday>.csv
 ```
 
 Code layout: `scripts/common.py` (config, safety rails, sheet sources, parsing, run report),
-`scripts/sheet_model.py` (header check, show rows, flags). Every run writes `work/run_<id>_<workflow>.md`.
+`scripts/sheet_model.py` (header check, show rows, flags), `scripts/history_snapshot.py` (Phase 1). Every run writes `work/run_<id>_<workflow>.md`.

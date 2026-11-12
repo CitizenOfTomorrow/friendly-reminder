@@ -178,8 +178,8 @@ The runtime flow for the report import is: `fetch_reports.py` writes each new em
 `timestamp | run_id | message_id | subject | sender | reason | extracted_json`
 
 **`history`**: weekly snapshot, long format. Replaces Tim's manual archive columns.
-`snapshot_date | row_number | termin | artist | venue | dice | cts | tickettoaster | band | andere | vvk_total | kon_total | pct`
-Use one row per show per snapshot. Include upcoming shows only (Termin >= snapshot_date). Growth is computed from consecutive snapshots.
+`snapshot_date | show_key | row_number | termin | artist | venue | dice | cts | tickettoaster | band | andere | vvk_total | kon_total | pct`
+Use one row per show per snapshot. Include upcoming shows only (Termin >= snapshot_date), without `///` shows. `show_key` = `termin|artist|venue`. Growth is computed from consecutive snapshots **by show_key**, not row_number, since rows move.
 
 **`neue_shows`**: intake for Phase 4, filled by Dennis or Sönke
 `status | artist | tourtitel | datum | venue | bestuhlt | doors | start | agentur | ticketzahlen_an | venue_kontakt_email | k_dice | k_cts | k_tickettoaster | k_band | k_andere | preis_dice | preis_cts | preis_tickettoaster | vvk_preis | ak_preis | oertlicher_veranstalter | tourneeveranstalter | logos | tourpraesentatoren | ankuendigung | vvk_start | deal_memo_text | result | processed_at`
@@ -212,8 +212,11 @@ An unknown provider always goes to `needs_review`.
 ### 6.1 Phase 1: History snapshot
 
 - **Trigger:** Mondays (later as a routine), or manually.
-- Read the main tab, filter to upcoming shows, and write one `history` row per show with the current provider values and V/W/Y as displayed.
-- **Idempotent:** if a snapshot for this `snapshot_date` already exists, do nothing.
+- `snapshot_date` is the **Monday of the current week** (Europe/Berlin), whatever day it runs. A manual run later in the week is then a no-op instead of an extra data point. `--snapshot-date` overrides it.
+- Read the main tab, filter to upcoming shows, and write one `history` row per show with the current provider values and V/W/Y as computed values (`#DIV/0!` → empty).
+- **Idempotent:** if a snapshot for this `snapshot_date` already exists, do nothing. Checked again right before appending.
+- The `history` tab is never created automatically: a live run aborts if it's missing. If it's empty, the header row is written first. A header that doesn't match aborts.
+- Tim's archive columns (AN+) are not imported (Mykki Blanco inconsistency, see 5.1).
 - Dry run writes the planned rows to `work/history_<date>.csv`.
 - This phase is the cheapest proof that credentials, scheduling and sheet access work. Do it first.
 

@@ -185,11 +185,34 @@ def spreadsheet_id(settings: dict, rt: Runtime) -> str:
     return sid
 
 
-def _load_gsheet(settings: dict, rt: Runtime, tab: str) -> tuple[Grid, str]:
+def open_spreadsheet(settings: dict, rt: Runtime):
     import gspread
 
     gc = gspread.authorize(google_credentials())
-    sh = gc.open_by_key(spreadsheet_id(settings, rt))
+    return gc.open_by_key(spreadsheet_id(settings, rt))
+
+
+def load_tab_rows(settings: dict, rt: Runtime, tab: str) -> list[list[Any]] | None:
+    """All values of a helper tab (log, history, ...) as lists, or None if the tab doesn't exist."""
+    if rt.sheet_xlsx is not None:
+        import openpyxl
+        wb = openpyxl.load_workbook(rt.sheet_xlsx, data_only=True, read_only=True)
+        if tab not in wb.sheetnames:
+            return None
+        return [list(r) for r in wb[tab].iter_rows(values_only=True)]
+    import gspread
+    sh = open_spreadsheet(settings, rt)
+    try:
+        ws = sh.worksheet(tab)
+    except gspread.WorksheetNotFound:
+        return None
+    return ws.get(value_render_option="UNFORMATTED_VALUE", date_time_render_option="FORMATTED_STRING")
+
+
+def _load_gsheet(settings: dict, rt: Runtime, tab: str) -> tuple[Grid, str]:
+    import gspread
+
+    sh = open_spreadsheet(settings, rt)
     try:
         ws = sh.worksheet(tab)
     except gspread.WorksheetNotFound:
@@ -316,7 +339,8 @@ class RunReport:
         self.warnings: list[str] = []
         self.info: list[str] = []
 
-    def write(self, directory: Path = WORK) -> Path:
+    def write(self, directory: Path | None = None) -> Path:
+        directory = directory or sys.modules[__name__].WORK
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / f"run_{self.run_id}_{self.workflow}.md"
         mode = "DRY RUN" if self.rt.dry_run else "LIVE"
@@ -336,6 +360,14 @@ class RunReport:
             lines.append("")
         path.write_text("\n".join(lines), encoding="utf-8")
         return path
+
+
+def rel(path: Path) -> str:
+    """Path relative to the repo when possible, for printing."""
+    try:
+        return str(Path(path).relative_to(ROOT))
+    except ValueError:
+        return str(path)
 
 
 def eprint(*a: Any) -> None:
