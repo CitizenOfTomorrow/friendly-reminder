@@ -160,7 +160,7 @@ The runtime flow for the report import is: `fetch_reports.py` writes each new em
 - **AI/AJ (Andere) are hidden columns** and are 0 or empty in every upcoming row. Hidden columns E–K and M are promo columns. Don't route anything new into AI without the team's OK (open question 1).
 - **Where AL says "Rausgegangen", those numbers are entered under Band (AG/AH)**, not Andere (e.g. So Soon, Salomea). "Bandshop Tickettoaster" (Shelter Boy) means a band shop run on Tickettoaster, so a Tickettoaster email can carry **band** numbers. See 5.3.
 - **The `MASTER` row** (Termin `MASTER` in N, followed by a row of `xx` values) sits at the bottom. Its V/W/X/Y formulas are the reference for new rows.
-- **Dates can be wrong.** Fauna (2026-02-20) sits in the February 2027 block, almost certainly a typo for 2027. A typo like that silently drops a show from "upcoming". Phase 0 flags every show whose date is out of order with its neighbours or whose month doesn't match the month separator above it.
+- **Dates can be wrong.** Fauna (2026-02-20) sits in the February 2027 block. It's a typo for 2027: the Tickettoaster report says 2027-02-20. A typo like that silently drops a show from "upcoming". Phase 0 flags every show whose date is out of order with its neighbours or whose month doesn't match the month separator above it.
 - **Month separators can be missing**: Dan Mangan (2027-06-18) sits under `MAI` and there's no `JUNI` row. Phase 4 must not assume each month has a separator; it inserts by date order and creates the separator if needed.
 - **Provider cells can contain junk text**: month separator rows hold `>` in AD and a space in AG, and old rows have values like `mart` or `w`. Any non-numeric, non-empty value in a provider cell means "send to review", never "treat as 0". `///` marks a show without ticketing (cancelled or free entry).
 - Upcoming rows include `tbc` shows (column C). Some still have sales (Mykki Blanco: tbc, 114 sold), so C alone doesn't decide anything. See open question 11.
@@ -227,7 +227,15 @@ An unknown provider always goes to `needs_review`.
 2. **Claude extracts** per mail, following the instructions in 6.3, and writes `work/extraction_<msgid>.json`.
 3. `apply_sales.py` validates each item (6.4), then applies the valid ones or plans them in dry run, and logs everything.
 4. If a mail yields no items, it goes to `needs_review` with the reason "no sales figures found".
-5. Agency emails with band shop numbers arrive from varying senders. Claude classifies these as `band` when the email clearly reports band shop sales for one of the shows.
+5. **Lessons from the prototype run on the test sheet (2026-11-11, one Tickettoaster report forwarded three times):**
+   - The forwards had no Message-ID, so the prototype fell back to `subject|date`. Each forward had a different date, so the **same report was applied three times**. Dedup must use the inner message's Message-ID (see step 1). If there's none, use a hash of sender + inner date + normalized body.
+   - Two of the three runs wrote nothing but no-op entries (`old = new`). **Skip no-op writes** and don't log them as changes; count them in the run report.
+   - The report lists shows that have no Tickettoaster allocation (Joan As Police Woman, Martin Kohlstedt) with 0 sold, and the prototype wrote `0` into those empty cells. **Don't write a 0 into an empty cell whose allocation is empty**; just note it.
+   - Venue names in reports differ from the sheet: "Heimathafen Neukölln" vs "Heimathafen", "Maschinenhaus (Kulturbrauerei)" vs "Maschinenhaus", "Silent Green, Kuppelhalle" vs "Silent Green", "Kindl Locations - Sudhaus" vs "Kindl Brauerei Sudhaus". Use a **venue alias list in `settings.yaml`** plus a token-overlap rule (match if every sheet token except stop words appears in the email venue), and send real mismatches to review.
+   - The report lists **FAUNA on 2027-02-20**, which confirms the sheet date 2026-02-20 is a typo.
+   - The existing `log` / `needs_review` tabs use the prototype's columns (`timestamp | message_id | show_id | field | old | new | evidence`). The schema in 5.2 is different: rename the old tabs to `log_prototype` / `needs_review_prototype` and create new ones.
+   - Test sheet state after that run: AE (TT) was reset to 0 before the import, so Nathanial Young (review, venue mismatch) still shows 0 instead of the real 5, and AE259–262 (past shows) are 0.
+6. Agency emails with band shop numbers arrive from varying senders. Claude classifies these as `band` when the email clearly reports band shop sales for one of the shows.
 
 ### 6.3 Extraction instructions (for Claude at runtime; also copy into the skill)
 

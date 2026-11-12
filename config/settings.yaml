@@ -10,7 +10,7 @@ cutoff:
 # Selected with TARGET=test|prod (default test).
 targets:
   test:
-    spreadsheet_id: "TODO_TEST_SPREADSHEET_ID"
+    spreadsheet_id: "1xZOfhrur_mTmCqkphtOrbdiejN_r6KHkJGvSj_HO1Xw"   # "x Berlin _ Ticketing" test copy
     imap_folder: "n8n"
     drafts_folder: "[Gmail]/Drafts"
   prod:
