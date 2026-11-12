@@ -228,6 +228,7 @@ An unknown provider always goes to `needs_review`.
 
 1. `fetch_reports.py` connects via IMAP to the configured mailbox and folder. It is **read-only** (`select_folder(readonly=True)`, `BODY.PEEK[]`).
    - It fetches mail from the last N days (default 14) that isn't already in `log` or `needs_review` (by Message-ID).
+   - **In production, reports arrive directly** from the providers at ticketing@friendlyreminder.live (confirmed by the team, 2026-11-12). Forwarding is mostly a test-setup artefact, so the provider normally comes straight from the real sender, and Message-ID dedup applies. Forward handling stays in for the test path and for agencies that forward band-shop numbers.
    - **Forwarded mails:** if a mail carries an attached original (`message/rfc822`, as when test mails are forwarded "as attachment"), use the **inner** message's From, Date, Message-ID, subject and body. Otherwise provider detection and dedup would key on whoever forwarded it. Keep the outer Message-ID too, for logging.
    - For each mail it saves subject, sender, date, body (HTML stripped to text), and CSV attachments as text. XLSX attachments are converted to CSV text. PDF attachments get text extraction if feasible; otherwise the filename is noted.
    - It also writes `work/upcoming_shows.json`: row_number, termin (ISO), artist, venue, and the current value and allocation for each provider.
