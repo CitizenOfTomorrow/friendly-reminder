@@ -1,4 +1,5 @@
 """Phase 2 tests: mail parsing, matching, validation rules, and the live path against a fake sheet."""
+import dataclasses
 import datetime as dt
 import json
 import sys
@@ -177,15 +178,43 @@ def test_typo_hint_points_at_row():
     assert "row 8 has Typo on 2026-02-20" in ds[0].reason
 
 
-def test_past_show_hint_says_past_not_typo():
+def _decide_as_of(as_of, items, shows_extra=None):
     sh, _ = model()
-    up = {s.row_number: s for s in sh.upcoming(dt.date(2026, 11, 21))}   # Alpha (2026-11-20) is now past
+    shows = sh.shows + (shows_extra or [])
+    up = {s.row_number: s for s in shows if s.termin >= as_of}
     m = mail("service@tickettoaster.de")
-    ds = A.decide(m, {"message_id": m["message_id"], "provider": "tickettoaster",
-                      "shows": [item(None, "2026-11-20", "ALPHA", 9)]}, sh.shows, up, S)
+    return A.decide(m, {"message_id": m["message_id"], "provider": "tickettoaster", "shows": items}, shows, up, S)
+
+
+def test_past_show_hint_says_past_not_typo():
+    ds = _decide_as_of(dt.date(2026, 11, 21), [item(None, "2026-11-20", "ALPHA", 9)])   # Alpha is past now
     assert ds[0].kind == "review"
     assert "row 3 has Alpha on 2026-11-20, a past show" in ds[0].reason
     assert "typo" not in ds[0].reason
+
+
+def test_unmatched_upcoming_show_is_not_called_past():
+    # Claude left row_number null (e.g. venue mismatch) for a show that is still upcoming
+    ds = _decide_as_of(AS_OF, [item(None, "2026-11-20", "ALPHA", 9)])
+    assert "row 3 has Alpha on 2026-11-20, an upcoming show" in ds[0].reason
+    assert "past" not in ds[0].reason and "typo" not in ds[0].reason
+
+
+def test_exact_date_row_beats_earlier_year_typo_row():
+    # row 8 "Typo" sits on 2026-02-20; add a later row with the same artist on the exact reported date
+    sh, _ = model()
+    exact = dataclasses.replace(next(s for s in sh.shows if s.row_number == 8), row_number=11,
+                                termin=dt.date(2027, 2, 20))
+    ds = _decide_as_of(dt.date(2027, 3, 1), [item(None, "2027-02-20", "TYPO", 1)], [exact])
+    assert "row 11 has Typo on 2027-02-20, a past show" in ds[0].reason
+
+
+def test_hint_prefers_the_row_claude_gave():
+    sh, _ = model()
+    twin = dataclasses.replace(next(s for s in sh.shows if s.row_number == 3), row_number=12)
+    ds = _decide_as_of(dt.date(2026, 11, 21), [item(12, "2026-11-20", "ALPHA", 9)], [twin])
+    assert ds[0].reason.startswith("row 12 is not an upcoming show")
+    assert "row 12 has Alpha on 2026-11-20, a past show" in ds[0].reason
 
 
 def test_formula_and_text_cells_are_never_overwritten():
