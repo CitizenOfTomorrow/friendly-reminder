@@ -109,6 +109,9 @@ def test_before_cutoff_only_complete_shows_get_updates():
     assert week == "2026-W46"
 
 
+ALPHA_ONLY = {"2026-11-20|Alpha|Neue Zukunft": {"dice", "tickettoaster"}}
+
+
 def test_after_cutoff_incomplete_shows_get_no_update_by_default():
     drafts, summary, _, _ = plan(True, {"2026-11-20|Alpha|Neue Zukunft": {"dice", "tickettoaster"}})
     updates = [d.to for d in drafts if d.template == "contact_update"]
@@ -119,6 +122,8 @@ def test_after_cutoff_incomplete_shows_get_no_update_by_default():
     body = drafts[-1].body
     assert "Gamma (Frannz Club): fehlt CTS, Band – kein Entwurf, Kontakt: g@x.de" in body
     assert "Entwurf mit Hinweis" not in body
+    assert [s["artist"] for s in summary["no_contact"]] == [s["artist"] for s in
+                                                            plan(True, ALPHA_ONLY, settings=S_INCOMPLETE)[1]["no_contact"]]
 
 
 def test_after_cutoff_incomplete_updates_and_band_reminders():

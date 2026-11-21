@@ -246,7 +246,7 @@ def plan_drafts(statuses: list[Status], *, after_cutoff: bool, now: dt.datetime,
             summary[st.state].append(base)
             continue
         wants_update = st.state == "complete" or (after_cutoff and incomplete_updates)
-        if wants_update and not st.contacts:
+        if not st.contacts and (wants_update or after_cutoff):
             summary["no_contact"].append(base)
         elif wants_update:
             shown = [p for p in ORDER if p in st.expected or (s.providers[p].sold or 0) > 0]
