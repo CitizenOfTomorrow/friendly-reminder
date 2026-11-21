@@ -9,7 +9,7 @@ KOMPLETT – Update-Entwurf liegt bereit ({{ complete | length }}):
 {% else %}- keine
 {% endfor %}
 UNVOLLSTÄNDIG ({{ incomplete | length }}):
-{% for s in incomplete %}- {{ s.datum }} {{ s.artist }} ({{ s.venue }}): fehlt {{ s.missing | join(", ") }}{% if s.draft %} -> Entwurf mit Hinweis an {{ s.to | join(", ") }}{% elif s.drafted_earlier %} (Entwurf bereits erstellt){% endif %}
+{% for s in incomplete %}- {{ s.datum }} {{ s.artist }} ({{ s.venue }}): fehlt {{ s.missing | join(", ") }}{% if s.draft %} -> Entwurf mit Hinweis an {{ s.to | join(", ") }}{% elif s.drafted_earlier %} (Entwurf bereits erstellt){% elif s.to %} – kein Entwurf, Kontakt: {{ s.to | join(", ") }}{% else %} – kein Entwurf, kein Kontakt{% endif %}
 {% else %}- keine
 {% endfor %}
 NEUERE ZAHLEN SEIT DEM ENTWURF – kein zweiter Entwurf, bitte ggf. im Entwurf anpassen ({{ newer | length }}):

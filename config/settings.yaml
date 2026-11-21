@@ -117,3 +117,6 @@ drafts:
   from: "Ticketing | Friendly Reminder <ticketing@friendlyreminder.live>"
   summary_to: ["ticketing@friendlyreminder.live"]
   signature: "Tim / Friendly Reminder"
+  # Contact updates go out only when all expected providers have reported (team process, 2026-11-21).
+  # true: after the cutoff, also draft updates for incomplete shows listing what's missing (old proposal).
+  incomplete_updates: false

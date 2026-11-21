@@ -92,10 +92,13 @@ def test_default_expected_providers_when_no_allocation():
     assert C.expected_providers(zeta, S) == S["default_expected_providers"]
 
 
-def plan(after_cutoff, reported, drafted=None):
+S_INCOMPLETE = dict(S, drafts=dict(S["drafts"], incomplete_updates=True))
+
+
+def plan(after_cutoff, reported, drafted=None, settings=S):
     now = dt.datetime(2026, 11, 12, 19, 0, tzinfo=BER) if after_cutoff else dt.datetime(2026, 11, 9, 10, 0, tzinfo=BER)
     return C.plan_drafts(statuses(reported), after_cutoff=after_cutoff, now=now, cutoff=C.cutoff_of(MON, S),
-                         review_lines=["x: y"], settings=S, drafted=drafted)
+                         review_lines=["x: y"], settings=settings, drafted=drafted)
 
 
 def test_before_cutoff_only_complete_shows_get_updates():
@@ -106,8 +109,21 @@ def test_before_cutoff_only_complete_shows_get_updates():
     assert week == "2026-W46"
 
 
-def test_after_cutoff_incomplete_updates_and_band_reminders():
+def test_after_cutoff_incomplete_shows_get_no_update_by_default():
     drafts, summary, _, _ = plan(True, {"2026-11-20|Alpha|Neue Zukunft": {"dice", "tickettoaster"}})
+    updates = [d.to for d in drafts if d.template == "contact_update"]
+    assert updates == [["a@x.de"]]                                          # only the complete show
+    assert {tuple(d.to) for d in drafts if d.template == "band_reminder"} == {("band@agency.de",), ("e@x.de",)}
+    gamma = next(s for s in summary["incomplete"] if s["artist"] == "Gamma")
+    assert not gamma["draft"] and gamma["missing"] == ["CTS", "Band"]
+    body = drafts[-1].body
+    assert "Gamma (Frannz Club): fehlt CTS, Band – kein Entwurf, Kontakt: g@x.de" in body
+    assert "Entwurf mit Hinweis" not in body
+
+
+def test_after_cutoff_incomplete_updates_and_band_reminders():
+    drafts, summary, _, _ = plan(True, {"2026-11-20|Alpha|Neue Zukunft": {"dice", "tickettoaster"}},
+                                 settings=S_INCOMPLETE)
     by = {(d.template, tuple(d.to)) for d in drafts}
     assert ("contact_update", ("g@x.de",)) in by and ("contact_update", ("b@x.de",)) not in by   # sold out: none
     assert ("band_reminder", ("band@agency.de",)) in by                                          # AL email
@@ -192,18 +208,19 @@ def test_already_drafted_keys_are_skipped_and_newer_numbers_noted():
 
 def test_incomplete_draft_is_followed_by_one_complete_update():
     # after the cutoff Gamma is incomplete (CTS and Band missing): update listing them
-    first, _, _, rec = plan(True, ALPHA)
+    first, _, _, rec = plan(True, ALPHA, settings=S_INCOMPLETE)
     gamma_inc = f"contact_update|2026-W46|{GAMMA}|incomplete"
     assert gamma_inc in {r["key"] for r in rec}
     drafted = {r["key"]: r for r in rec}
     # CTS reports, VVK unchanged: still incomplete, no second draft, but the summary notes the change
-    _, summary, _, rec2 = plan(True, {**ALPHA, GAMMA: {"cts"}}, drafted=drafted)
+    _, summary, _, rec2 = plan(True, {**ALPHA, GAMMA: {"cts"}}, drafted=drafted, settings=S_INCOMPLETE)
     assert gamma_inc not in {r["key"] for r in rec2}
     gamma = next(n for n in summary["newer"] if n["artist"] == "Gamma")
     assert gamma["before"] == gamma["vvk"] == 11 and gamma["before_missing"] == ["CTS", "Band"]
     assert gamma["missing"] == ["Band"]
     # band reports too, VVK unchanged: now complete -> one complete update, flagged as replacing the old one
-    drafts, summary, _, rec3 = plan(True, {**ALPHA, GAMMA: {"cts", "band"}}, drafted=drafted)
+    drafts, summary, _, rec3 = plan(True, {**ALPHA, GAMMA: {"cts", "band"}}, drafted=drafted,
+                                    settings=S_INCOMPLETE)
     new = [d for d in drafts if d.template == "contact_update" and d.to == ["g@x.de"]]
     assert len(new) == 1 and new[0].key == f"contact_update|2026-W46|{GAMMA}"
     assert "Noch ausstehend" not in new[0].body
@@ -326,7 +343,7 @@ def test_main_live_records_drafts_in_log_once(env, monkeypatch):
     keys = set(C.drafted_from_log(log.rows))
     assert any(k.startswith("weekly_summary|2026-W46|after_cutoff|") for k in keys)
     assert "contact_update|2026-W46|2026-11-20|Alpha|Neue Zukunft" in keys
-    assert f"contact_update|2026-W46|{GAMMA}|incomplete" in keys
+    assert not any(k.endswith("|incomplete") for k in keys)       # default: no incomplete updates
     assert f"band_reminder|2026-W46|{GAMMA}" in keys
     assert not list(out.glob("drafted_*.json"))
     n = len(log.rows)

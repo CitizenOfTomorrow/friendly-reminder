@@ -12,7 +12,8 @@ Per upcoming show:
   sold out           = VVK >= KON > 0            -> no update draft
   no allocation      = KON empty/0                -> skipped, listed in the summary
 Drafts:
-  contact_update  complete shows; after the cutoff also incomplete ones, listing what's missing
+  contact_update  complete shows only; incomplete shows are listed in the summary (with
+                  drafts.incomplete_updates: true, after the cutoff also incomplete ones, listing what's missing)
   band_reminder   after the cutoff, band numbers expected but missing; to the email in AL, else AK
   weekly_summary  when anything in it changed, to settings.drafts.summary_to
 
@@ -230,6 +231,7 @@ def plan_drafts(statuses: list[Status], *, after_cutoff: bool, now: dt.datetime,
 
     labels = {k: p["label_kontingent"] for k, p in settings["providers"].items()}
     sig = settings["drafts"]["signature"]
+    incomplete_updates = bool(settings["drafts"].get("incomplete_updates", False))
     drafts, summary = [], {k: [] for k in ("complete", "incomplete", "sold_out", "band_missing", "no_contact",
                                            "no_allocation", "newer")}
     for st in statuses:
@@ -243,7 +245,7 @@ def plan_drafts(statuses: list[Status], *, after_cutoff: bool, now: dt.datetime,
         if st.state in ("no_allocation", "sold_out"):
             summary[st.state].append(base)
             continue
-        wants_update = st.state == "complete" or after_cutoff
+        wants_update = st.state == "complete" or (after_cutoff and incomplete_updates)
         if wants_update and not st.contacts:
             summary["no_contact"].append(base)
         elif wants_update:
