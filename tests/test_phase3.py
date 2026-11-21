@@ -120,7 +120,7 @@ def test_after_cutoff_incomplete_shows_get_no_update_by_default():
     gamma = next(s for s in summary["incomplete"] if s["artist"] == "Gamma")
     assert not gamma["draft"] and gamma["missing"] == ["CTS", "Band"]
     body = drafts[-1].body
-    assert "Gamma (Frannz Club): fehlt CTS, Band – kein Entwurf, Kontakt: g@x.de" in body
+    assert "Gamma (Frannz Club): diese Woche noch kein Bericht von: CTS, Band – kein Entwurf, Kontakt: g@x.de" in body
     assert "Entwurf mit Hinweis" not in body
     assert [s["artist"] for s in summary["no_contact"]] == [s["artist"] for s in
                                                             plan(True, ALPHA_ONLY, settings=S_INCOMPLETE)[1]["no_contact"]]
