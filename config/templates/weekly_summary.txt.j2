@@ -5,7 +5,7 @@ Hallo Tim,
 Stand {{ stand }}{% if after_cutoff %} (nach dem Cutoff {{ cutoff }}){% else %} (vor dem Cutoff {{ cutoff }}){% endif %}.
 
 KOMPLETT – Update-Entwurf liegt bereit ({{ complete | length }}):
-{% for s in complete %}- {{ s.datum }} {{ s.artist }} ({{ s.venue }}): {{ s.vvk }} / {{ s.kon }}{% if s.zuwachs is not none %}, {{ "%+d" | format(s.zuwachs) }} zur Vorwoche{% endif %}{% if s.draft %} -> Entwurf an {{ s.to | join(", ") }}{% elif s.drafted_earlier %} (Entwurf bereits erstellt){% endif %}
+{% for s in complete %}- {{ s.datum }} {{ s.artist }} ({{ s.venue }}): {{ s.vvk }} / {{ s.kon }}{% if s.zuwachs is not none %}, {{ "%+d" | format(s.zuwachs) }} zur Vorwoche{% endif %}{% if s.draft %} -> Entwurf an {{ s.to | join(", ") }}{% if s.supersedes %} (ersetzt den unvollständigen Entwurf){% endif %}{% elif s.drafted_earlier %} (Entwurf bereits erstellt){% endif %}
 {% else %}- keine
 {% endfor %}
 UNVOLLSTÄNDIG ({{ incomplete | length }}):
@@ -13,7 +13,7 @@ UNVOLLSTÄNDIG ({{ incomplete | length }}):
 {% else %}- keine
 {% endfor %}
 NEUERE ZAHLEN SEIT DEM ENTWURF – kein zweiter Entwurf, bitte ggf. im Entwurf anpassen ({{ newer | length }}):
-{% for s in newer %}- {{ s.datum }} {{ s.artist }} ({{ s.venue }}): im Entwurf {{ s.before if s.before is not none else "?" }}, jetzt {{ s.vvk }} / {{ s.kon }}
+{% for s in newer %}- {{ s.datum }} {{ s.artist }} ({{ s.venue }}): im Entwurf {{ s.before if s.before is not none else "?" }}, jetzt {{ s.vvk }} / {{ s.kon }}{% if s.before_missing != s.missing %}; im Entwurf fehlte {{ s.before_missing | join(", ") or "nichts" }}, jetzt {{ s.missing | join(", ") or "nichts" }}{% endif %}
 {% else %}- keine
 {% endfor %}
 AUSVERKAUFT – kein Update ({{ sold_out | length }}):
