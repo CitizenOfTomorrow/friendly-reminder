@@ -177,6 +177,17 @@ def test_typo_hint_points_at_row():
     assert "row 8 has Typo on 2026-02-20" in ds[0].reason
 
 
+def test_past_show_hint_says_past_not_typo():
+    sh, _ = model()
+    up = {s.row_number: s for s in sh.upcoming(dt.date(2026, 11, 21))}   # Alpha (2026-11-20) is now past
+    m = mail("service@tickettoaster.de")
+    ds = A.decide(m, {"message_id": m["message_id"], "provider": "tickettoaster",
+                      "shows": [item(None, "2026-11-20", "ALPHA", 9)]}, sh.shows, up, S)
+    assert ds[0].kind == "review"
+    assert "row 3 has Alpha on 2026-11-20, a past show" in ds[0].reason
+    assert "typo" not in ds[0].reason
+
+
 def test_formula_and_text_cells_are_never_overwritten():
     ds = run(mail("reports@eventim.de"), "cts", [item(4, "2026-11-22", "Fortuna Ehrenfeld", 140)])
     assert ds[0].kind == "review" and "formula" in ds[0].reason

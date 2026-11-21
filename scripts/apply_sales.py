@@ -82,10 +82,13 @@ class Decision:
 
 
 def _hint_for_unmatched(item: dict, shows: list[Show]) -> str:
-    """For a show that isn't upcoming: is there a row with the same artist and day/month (typo in the year)?"""
+    """For a show that isn't upcoming: is there a row with the same artist and day/month?
+    Same full date -> the show is simply in the past. Same day/month, other year -> likely a typo in the year."""
     d = parse_date(item.get("date"))
     for s in shows:
         if artist_matches(item.get("artist") or "", s.artist) and d and (s.termin.month, s.termin.day) == (d.month, d.day):
+            if s.termin == d:
+                return f"; row {s.row_number} has {s.artist} on {s.termin.isoformat()}, a past show (nothing to update)"
             return f"; row {s.row_number} has {s.artist} on {s.termin.isoformat()} (typo in the sheet?)"
     return ""
 
