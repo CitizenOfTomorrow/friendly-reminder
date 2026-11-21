@@ -81,13 +81,29 @@ class Decision:
     note: str = ""
 
 
-def _hint_for_unmatched(item: dict, shows: list[Show]) -> str:
-    """For a show that isn't upcoming: is there a row with the same artist and day/month (typo in the year)?"""
+def _hint_for_unmatched(item: dict, shows: list[Show], upcoming: dict[int, Show]) -> str:
+    """For an item that didn't match an upcoming row: point at a row with the same artist and day/month.
+
+    Prefers an exact-date row over a same day/month row in another year, and among equals the row Claude gave.
+    Exact date and not upcoming -> a past show. Exact date and upcoming -> it should have matched; a human checks.
+    Same day/month, other year -> likely a typo in the year.
+    """
     d = parse_date(item.get("date"))
-    for s in shows:
-        if artist_matches(item.get("artist") or "", s.artist) and d and (s.termin.month, s.termin.day) == (d.month, d.day):
-            return f"; row {s.row_number} has {s.artist} on {s.termin.isoformat()} (typo in the sheet?)"
-    return ""
+    if not d:
+        return ""
+    cands = [s for s in shows if artist_matches(item.get("artist") or "", s.artist)
+             and (s.termin.month, s.termin.day) == (d.month, d.day)]
+    if not cands:
+        return ""
+    given = item.get("row_number")
+    cands.sort(key=lambda s: (s.termin != d, s.row_number != given))
+    s = cands[0]
+    where = f"; row {s.row_number} has {s.artist} on {s.termin.isoformat()}"
+    if s.termin != d:
+        return where + " (typo in the sheet?)"
+    if s.row_number in upcoming:
+        return where + ", an upcoming show (check why it didn't match)"
+    return where + ", a past show (nothing to update)"
 
 
 def _bandshop_on_tickettoaster(show: Show) -> bool:
@@ -148,11 +164,11 @@ def decide(mail: dict, extraction: dict, model_shows: list[Show], upcoming: dict
             review(f"tickets_sold is not a non-negative integer: {new!r}")
             continue
         if r is None:
-            review("no matching show (row_number is null)" + _hint_for_unmatched(it, model_shows))
+            review("no matching show (row_number is null)" + _hint_for_unmatched(it, model_shows, upcoming))
             continue
         show = upcoming.get(r)
         if show is None:
-            review(f"row {r} is not an upcoming show (any more)" + _hint_for_unmatched(it, model_shows))
+            review(f"row {r} is not an upcoming show (any more)" + _hint_for_unmatched(it, model_shows, upcoming))
             continue
         if r in conflicting:
             review(f"row {r} reported twice in this mail with different numbers {sorted(by_row[r])}", show)
