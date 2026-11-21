@@ -30,7 +30,7 @@ python scripts/import_gmail_json.py work/gmail_raw/*.json   # Phase 2: Gmail con
 # then Claude writes work/extractions/<key>.json per mail (skill: ticketing)
 python scripts/apply_sales.py                    # dry run plan; DRY_RUN=0 TARGET=test to write
 python scripts/setup_tabs.py                     # one-time: log / needs_review tabs
-python scripts/completeness.py [--now 2026-11-10T13:00]   # Phase 3: drafts -> work/drafts/<week>/*.eml
+python scripts/completeness.py [--now 2026-11-10T13:00] [--fresh]   # Phase 3: drafts -> work/drafts/<week>/*.eml, once per key
 ```
 
 Code layout: `scripts/common.py` (config, safety rails, sheet sources, parsing, run report),
