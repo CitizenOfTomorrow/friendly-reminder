@@ -92,14 +92,14 @@ def test_default_expected_providers_when_no_allocation():
     assert C.expected_providers(zeta, S) == S["default_expected_providers"]
 
 
-def plan(after_cutoff, reported):
+def plan(after_cutoff, reported, drafted=None):
     now = dt.datetime(2026, 11, 12, 19, 0, tzinfo=BER) if after_cutoff else dt.datetime(2026, 11, 9, 10, 0, tzinfo=BER)
     return C.plan_drafts(statuses(reported), after_cutoff=after_cutoff, now=now, cutoff=C.cutoff_of(MON, S),
-                         review_lines=["x: y"], settings=S)
+                         review_lines=["x: y"], settings=S, drafted=drafted)
 
 
 def test_before_cutoff_only_complete_shows_get_updates():
-    drafts, summary, week = plan(False, {"2026-11-20|Alpha|Neue Zukunft": {"dice", "tickettoaster"}})
+    drafts, summary, week, _ = plan(False, {"2026-11-20|Alpha|Neue Zukunft": {"dice", "tickettoaster"}})
     kinds = [(d.template, d.to) for d in drafts]
     assert kinds == [("contact_update", ["a@x.de"]), ("weekly_summary", ["ticketing@friendlyreminder.live"])]
     assert "Noch ausstehend" not in drafts[0].body and "(KW 46)" in drafts[0].subject
@@ -107,7 +107,7 @@ def test_before_cutoff_only_complete_shows_get_updates():
 
 
 def test_after_cutoff_incomplete_updates_and_band_reminders():
-    drafts, summary, _ = plan(True, {"2026-11-20|Alpha|Neue Zukunft": {"dice", "tickettoaster"}})
+    drafts, summary, _, _ = plan(True, {"2026-11-20|Alpha|Neue Zukunft": {"dice", "tickettoaster"}})
     by = {(d.template, tuple(d.to)) for d in drafts}
     assert ("contact_update", ("g@x.de",)) in by and ("contact_update", ("b@x.de",)) not in by   # sold out: none
     assert ("band_reminder", ("band@agency.de",)) in by                                          # AL email
@@ -123,8 +123,8 @@ def test_after_cutoff_incomplete_updates_and_band_reminders():
 
 
 def test_keys_are_stable_per_week_and_show():
-    a, _, _ = plan(True, {})
-    b, _, _ = plan(True, {})
+    a, _, _, _ = plan(True, {})
+    b, _, _, _ = plan(True, {})
     assert [d.key for d in a[:-1]] == [d.key for d in b[:-1]]
     assert all(d.key.split("|")[1] == "2026-W46" for d in a)
 
@@ -150,3 +150,135 @@ def test_no_code_path_can_send():
     src = "\n".join(p.read_text() for p in (Path(__file__).parent.parent / "scripts").glob("*.py"))
     for forbidden in ("smtplib", "send_message(", ".sendmail(", "messages().send", "drafts().send"):
         assert forbidden not in src, forbidden
+
+
+# ----------------------------------------------------------------- idempotency (HANDOVER §6.5)
+
+ALPHA = {"2026-11-20|Alpha|Neue Zukunft": {"dice", "tickettoaster"}}
+
+
+def test_summary_key_is_one_per_week_and_cutoff_phase():
+    before, _, _, _ = plan(False, ALPHA)
+    after, _, _, _ = plan(True, ALPHA)
+    assert before[-1].key == "weekly_summary|2026-W46|before_cutoff"
+    assert after[-1].key == "weekly_summary|2026-W46|after_cutoff"
+
+
+def test_already_drafted_keys_are_skipped_and_newer_numbers_noted():
+    first, _, _, records = plan(False, ALPHA)
+    assert [r["key"] for r in records] == [d.key for d in first]
+    alpha = next(r for r in records if r["template"] == "contact_update")
+    assert alpha["vvk"] == 8 and alpha["artist"] == "Alpha" and alpha["termin"] == "2026-11-20"
+
+    # same numbers, same phase: nothing new at all
+    again, summary, _, rec2 = plan(False, ALPHA, drafted={r["key"]: r for r in records})
+    assert again == [] and rec2 == [] and summary["newer"] == []
+
+    # after the cutoff, Alpha's VVK changed since its draft: no second Alpha draft, but a summary line
+    drafted = {r["key"]: {**r, "vvk": 6} for r in records}
+    after, summary, _, _ = plan(True, ALPHA, drafted=drafted)
+    assert not any(d.template == "contact_update" and d.to == ["a@x.de"] for d in after)
+    assert [(n["artist"], n["before"], n["vvk"]) for n in summary["newer"]] == [("Alpha", 6, 8)]
+    body = after[-1].body
+    assert after[-1].template == "weekly_summary"
+    assert "Alpha (Neue Zukunft): im Entwurf 6, jetzt 8 / 70" in body
+    assert "Alpha (Neue Zukunft): 8 / 70 (Entwurf bereits erstellt)" in body
+
+
+def test_draft_log_rows_roundtrip():
+    rows = [LOG_COLUMNS,
+            C.draft_log_row({"key": "contact_update|2026-W46|k", "vvk": 8, "termin": "2026-11-20",
+                             "artist": "Alpha", "venue": "Neue Zukunft"}, "2026-11-09T10:00:00+01:00", "r1"),
+            C.draft_log_row({"key": "weekly_summary|2026-W46|before_cutoff", "vvk": None}, "2026-11-09T10:00:00+01:00", "r1"),
+            logrow("2026-11-09T10:00:00+01:00", "", "", "", "", "draft created: x|dry", dry="1"),
+            logrow("2026-11-09T10:00:00+01:00", "2026-11-20", "Alpha", "Neue Zukunft", "AA")]
+    assert C.drafted_from_log(rows) == {"contact_update|2026-W46|k": {"vvk": 8},
+                                        "weekly_summary|2026-W46|before_cutoff": {"vvk": None}}
+    # draft rows never count as a provider report
+    assert C.reported_since(rows, MON, S) == {"2026-11-20|Alpha|Neue Zukunft": {"dice"}}
+
+
+# ----------------------------------------------------------------- main() end to end, fake sheet
+
+class FakeLog:
+    def __init__(self, rows):
+        self.rows, self.appends = rows, 0
+
+    def get(self):
+        return [list(r) for r in self.rows]
+
+    def append_rows(self, payload, value_input_option, table_range):
+        assert value_input_option == "RAW"
+        self.rows.extend(payload)
+        self.appends += 1
+
+
+class FakeSpreadsheet:
+    def __init__(self, log):
+        self.log = log
+
+    def worksheet(self, name):
+        assert name == S["tabs"]["log"], "completeness may only ever append to the log tab"
+        return self.log
+
+
+@pytest.fixture
+def env(monkeypatch, tmp_path):
+    log = FakeLog([LOG_COLUMNS,
+                   logrow("2026-11-09T10:00:00+01:00", "2026-11-20", "Alpha", "Neue Zukunft", "AA"),
+                   logrow("2026-11-09T10:00:00+01:00", "2026-11-20", "Alpha", "Neue Zukunft", "AE")])
+    monkeypatch.setenv("DRY_RUN", "1")
+    monkeypatch.setenv("TARGET", "test")
+    monkeypatch.delenv("SHEET_XLSX", raising=False)
+    monkeypatch.setattr("common.WORK", tmp_path)
+    monkeypatch.setattr(C, "load_grid", lambda s, rt: (grid(), "fake"))
+    monkeypatch.setattr(C, "load_tab_rows", lambda s, rt, tab: log.get() if tab == S["tabs"]["log"] else None)
+    monkeypatch.setattr(C, "drafts_root", lambda s: tmp_path / "drafts")
+    monkeypatch.setattr(C, "get_backend", lambda s, rt: outbox.EmlBackend(tmp_path / "drafts", "t@fr.live"))
+    return log, tmp_path / "drafts" / "2026-W46"
+
+
+def emls(d):
+    return sorted(p.name for p in d.glob("*.eml"))
+
+
+def test_main_dry_run_drafts_once_then_ledger_holds(env, monkeypatch):
+    log, out = env
+
+    def boom(*a):
+        raise AssertionError("dry run must not open the sheet")
+    monkeypatch.setattr(C, "open_spreadsheet", boom)
+    assert C.main(["--now", "2026-11-09T13:00"]) == 0
+    first = emls(out)
+    assert len(first) == 2 and any("alpha" in n for n in first) and any("before-cutoff" in n for n in first)
+    assert len(C.json.loads((out / "drafted.json").read_text())) == 2
+    for p in out.glob("*.eml"):
+        p.unlink()
+    assert C.main(["--now", "2026-11-09T15:00"]) == 0          # same phase again: nothing new
+    assert emls(out) == []
+    assert C.main(["--now", "2026-11-09T15:00", "--fresh"]) == 0
+    assert emls(out) == first
+
+
+def test_main_live_records_drafts_in_log_once(env, monkeypatch):
+    log, out = env
+    monkeypatch.setenv("DRY_RUN", "0")
+    monkeypatch.setattr(C, "open_spreadsheet", lambda s, rt: FakeSpreadsheet(log))
+    assert C.main(["--now", "2026-11-10T13:00"]) == 0           # after cutoff
+    assert log.appends == 1
+    keys = set(C.drafted_from_log(log.rows))
+    assert "weekly_summary|2026-W46|after_cutoff" in keys
+    assert "contact_update|2026-W46|2026-11-20|Alpha|Neue Zukunft" in keys
+    assert "band_reminder|2026-W46|2026-11-25|Gamma|Frannz Club" in keys
+    assert not (out / "drafted.json").exists()
+    n = len(log.rows)
+    assert C.main(["--now", "2026-11-10T14:00"]) == 0
+    assert log.appends == 1 and len(log.rows) == n                # second run: no new drafts, no new rows
+
+
+def test_main_live_without_log_tab_aborts(env, monkeypatch):
+    monkeypatch.setenv("DRY_RUN", "0")
+    monkeypatch.setattr(C, "load_tab_rows", lambda s, rt, tab: None)
+    monkeypatch.setattr(C, "open_spreadsheet", lambda s, rt: pytest.fail("must not write"))
+    with pytest.raises(ConfigError):
+        C.main(["--now", "2026-11-10T13:00"])

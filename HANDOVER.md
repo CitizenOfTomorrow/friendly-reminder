@@ -315,6 +315,8 @@ Writes are strictly limited to **the one provider column of the matched row**. A
 
 **Draft idempotency:** completeness runs after every import, so without a guard it would create the same draft again and again. Every draft created is logged with a key `(draft_type, row identity, ISO week)`. A draft is only created if that key isn't logged yet. If a later run has newer numbers for an already drafted show, note it in the summary instead of adding a second draft. Row identity is `termin|artist|venue`, not the row number, since rows move.
 
+**Implementation (2026-11-21):** keys are `draft_type|<ISO week>|termin|artist|venue`; the weekly summary's key is `weekly_summary|<ISO week>|before_cutoff` or `after_cutoff`, so Tim gets at most one summary before and one after the cutoff. With `DRY_RUN=0 TARGET=test` each new draft is appended to `log` as `draft created: <key>` with the VVK at draft time in `new`. A dry run reads those rows too and keeps its own keys in `work/drafts/<week>/drafted.json` (`--fresh` ignores it). A show that was already drafted and whose VVK changed since appears in the summary under "Neuere Zahlen seit dem Entwurf".
+
 ### 6.6 Phase 4: Show intake
 
 **Trigger:** hourly (later as a routine). Process rows in `neue_shows` with status `bereit`.
