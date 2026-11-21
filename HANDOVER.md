@@ -305,7 +305,7 @@ Writes are strictly limited to **the one provider column of the matched row**. A
 **Outputs:**
 
 1. **Contact update draft** (template 7.2) for each show where all expected providers are reported and the show isn't sold out. Recipients come from AK "Ticketzahlen an": extract valid email addresses only, since AK may hold several comma-separated addresses or free text such as "siehe Tour alles an Scott". If there's no valid address, skip and log it.
-2. **Cutoff:** at the configured cutoff (proposal: Tuesday 12:00), also draft updates for incomplete shows, with a line listing the missing providers.
+2. **Cutoff:** at the configured cutoff (proposal: Tuesday 12:00), incomplete shows are listed in Tim's summary with what's missing and the contact address, but get **no** contact draft. The team's process only emails the contact "wenn alle Zahlen da sind" (decided by Oliver, 2026-11-21). The earlier proposal (also draft updates for incomplete shows, listing the missing providers) is still available with `drafts.incomplete_updates: true`.
 3. **Reminder draft to the agency** (template 7.3) when band shop numbers are expected but missing at the cutoff. Recipient: the email address in AL if there is one, else AK. If AL holds a URL (Tickettoaster approval link) or a channel name ("Rausgegangen"), there's nobody to email; list it in the summary as "check manually: <AL>" instead.
 4. One **summary draft to Tim**: which shows are complete, which are missing what, and what landed in `needs_review`. Column B (TL) names other team members too; whether the summary is split per person is open question 12.
 
@@ -539,7 +539,7 @@ Secrets go in **environment variables only**. Never commit them, and never put t
 - Re-running doesn't re-process the same Message-IDs.
 
 **Phase 3**
-- Complete shows get a contact draft. Sold-out shows get none. Incomplete shows get a draft only after the cutoff, listing what's missing. The summary draft for Tim is correct.
+- Complete shows get a contact draft. Sold-out and incomplete shows get none; after the cutoff, incomplete shows are listed in Tim's summary with what's missing, and missing band numbers get a reminder draft. The summary draft for Tim is correct.
 
 **Phase 4**
 - Der Assistent already exists in the sheet (2027-04-10, Neue Zukunft). Running it through `neue_shows` against the sheet as is must end in `fehler` "existiert bereits". For the positive test, delete that row in the **test copy** first.
