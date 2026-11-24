@@ -2,6 +2,8 @@
 
 Read `HANDOVER.md` fully before changing anything. It's the spec.
 
+How the company works (roles, booking, VVK, ticketing, Abrechnung, staff): `docs/wie-friendly-reminder-funktioniert.md`. Read it for business context; HANDOVER.md stays the spec.
+
 **Current phase: 3 (completeness + drafts), eml drafts only. Phases 1–2 signed off. The demo sheet is the test target; the production sheet ID is in the config but unused. Drafts go to `work/drafts/<week>/*.eml` — no mailbox drafts until approved. Modularity proposal: `docs/ARCHITECTURE.md`.**
 Don't start a later phase until the previous phase's acceptance criteria (HANDOVER §10) are met and a human has signed off.
 
