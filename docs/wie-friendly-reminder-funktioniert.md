@@ -135,7 +135,7 @@ Aktuell machen wir kein E-Mail-Marketing.
 
 ### 3.1. Anbieter
 
-Unseren eigenen Shop betreiben wir bei Ticketmaster. Wir stellen gerade auf Dice um, deshalb laufen aktuell Tickets parallel über beide Systeme. Dazu kommen immer CTS Eventim, manchmal ein eigener Shop der Band und gelegentlich Rausgegangen. Die Shops bei Dice, Eventim und Ticketmaster legen wir selbst an.
+Unseren eigenen Shop betreiben wir bei Tickettoaster. Wir stellen gerade auf Dice um, deshalb laufen aktuell Tickets parallel über beide Systeme. Dazu kommen immer CTS Eventim, manchmal ein eigener Shop der Band und gelegentlich Rausgegangen. Die Shops bei Dice, Eventim und Tickettoaster legen wir selbst an.
 
 ### 3.2. Vor dem VVK-Start
 
@@ -153,9 +153,9 @@ In der Mail stehen: Titel der Show, Tourtitel (falls vorhanden), Bestuhlungssitu
 
 ### 3.3. Nach dem VVK-Start
 
-Die Tickets gehen auf jeden Fall über Dice und Eventim in den Verkauf. Solange der Umstieg läuft auch über Ticketmaster. Manchmal kommen ein Bandshop oder Rausgegangen dazu.
+Die Tickets gehen auf jeden Fall über Dice und Eventim in den Verkauf. Solange der Umstieg läuft auch über Tickettoaster. Manchmal kommen ein Bandshop oder Rausgegangen dazu.
 
-Dice, Eventim, Ticketmaster und Rausgegangen schicken uns Rapporte mit den aktuellen Zahlen an unsere Ticketing E-Mail Adresse. Gibt es einen Bandshop, schickt uns die Agentur der Band die Zahlen. Hier müssen wir regelmäßig nachhaken.
+Dice, Eventim, Tickettoaster und Rausgegangen schicken uns Rapporte mit den aktuellen Zahlen an unsere Ticketing E-Mail Adresse. Gibt es einen Bandshop, schickt uns die Agentur der Band die Zahlen. Hier müssen wir regelmäßig nachhaken.
 
 Unser Freelancer für das Ticketing überträgt die Zahlen ins Google Sheet. Sobald alle da sind, schickt er sie per Mail an die dort hinterlegte Kontaktperson. Das passiert immer montags, oder etwas später, wenn irgendwo Zahlen zu spät ankommen. Danach archiviert er die Zahlen der Vorwoche hinten im Sheet, damit man die Zuwächse sieht. Ist eine Show ausverkauft, informieren wir die Agentur nicht mehr wöchentlich.
 
